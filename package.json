@@ -1,6 +1,6 @@
 {
     "name": "publicbot-backend",
-    "version": "2.1.4",
+    "version": "2.5.3",
     "description": "backend con RAG para el chatbot público",
     "author": "CSGE",
     "private": true,

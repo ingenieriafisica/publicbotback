@@ -2,7 +2,6 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AppService, HealthCheckResponse } from './app.service';
 import { JwtGuard } from './auth/jwt.guard';
 
-@UseGuards(JwtGuard)
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}

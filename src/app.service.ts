@@ -32,7 +32,7 @@ export class AppService {
   private readonly startTime: number = Date.now();
 
   getHello(): string {
-    return 'publicbot sena v2.0';
+    return 'publicbot Sena v2.5.3';
   }
 
   getHealthDetailed(): HealthCheckResponse {
