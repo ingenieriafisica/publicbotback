@@ -78,7 +78,7 @@ export class LocalragService implements OnModuleInit, OnModuleDestroy {
             // Inicializar vectorStore con embeddings personalizados
             this.vectorStore = new MongoDBAtlasVectorSearch(this.customEmbeddings.bind(this), {
                 collection: this.collection,
-                indexName: "vector_index",
+                indexName: "default",
                 textKey: "document",
                 embeddingKey: "embedding",
             });
@@ -95,31 +95,22 @@ export class LocalragService implements OnModuleInit, OnModuleDestroy {
     private async ensureVectorIndex() {
         try {
             const indexes = await this.collection.indexes();
-            const vectorIndexExists = indexes.some(index => index.name === "vector_index");
+            const vectorIndexExists = indexes.some(index => index.name === "default");
 
             if (!vectorIndexExists) {
                 this.logger.log('Creando índice vectorial...');
 
-                // Para MongoDB Atlas o local con search indexes
-                await this.collection.createIndex(
-                    { embedding: "vector" },
-                    {
-                        name: "vector_index",
-                        "vector.options": {
-                            type: "hnsw",
-                            similarity: "cosine",
-                            dimensions: this.embeddingDimension
-                        }
-                    }
-                );
+                // Para MongoDB Atlas - necesitas crear un search index a través del Atlas UI o API
+                // No puedes crear índices vectoriales con createIndex()
+                this.logger.warn('Para MongoDB Atlas, crea manualmente el search index en la UI del Atlas');
+                this.logger.warn('O usa la API de Atlas Search para crear el índice');
 
-                this.logger.log('Índice vectorial creado exitosamente');
+                return;
             } else {
                 this.logger.log('Índice vectorial ya existe');
             }
         } catch (error) {
-            this.logger.error(`Error creando índice vectorial: ${error.message}`);
-            this.logger.warn('Continuando sin índice vectorial. Algunas funcionalidades pueden no estar disponibles.');
+            this.logger.error(`Error verificando índices: ${error.message}`);
         }
     }
 
@@ -422,7 +413,7 @@ Respuesta:`;
             let vectorIndexStatus = 'unknown';
             try {
                 const indexes = await this.collection.indexes();
-                const vectorIndex = indexes.find(index => index.name === "vector_index");
+                const vectorIndex = indexes.find(index => index.name === "default");
                 vectorIndexStatus = vectorIndex ? 'exists' : 'missing';
             } catch (error) {
                 vectorIndexStatus = 'error';
