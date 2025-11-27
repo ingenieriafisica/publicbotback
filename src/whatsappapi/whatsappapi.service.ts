@@ -4,14 +4,15 @@ import { firstValueFrom } from 'rxjs';
 import { SendTextMessageDto } from './dto/send-text-message.dto';
 import { SendTemplateMessageDto } from './dto/send-template-message.dto';
 
+// 💡 Inclusión explícita de dotenv y llamada a config()
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 @Injectable()
 export class WhatsappapiService {
   private readonly logger = new Logger(WhatsappapiService.name);
-  
-  // Variables locales
+
+  // Variables de configuración de solo lectura
   private readonly phoneNumberId: string;
   private readonly verifyToken: string;
   private readonly accessToken: string;
@@ -20,14 +21,15 @@ export class WhatsappapiService {
 
   constructor(
     private readonly httpService: HttpService,
-    // Eliminamos la inyección de ConfigService
+    // ❌ Eliminamos la inyección de ConfigService, ya que usamos process.env
   ) {
     // 2. Asignamos los valores directamente desde process.env
     this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     this.verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
     this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     this.baseUrl = process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com';
-    this.apiVersion = process.env.WHATSAPP_API_VERSION || 'v19.0';
+    // Usamos el valor del .env (v22.0) o un valor por defecto
+    this.apiVersion = process.env.WHATSAPP_API_VERSION || 'v22.0'; 
 
     // Validación básica (opcional pero recomendada)
     if (!this.phoneNumberId || !this.accessToken) {
@@ -36,8 +38,6 @@ export class WhatsappapiService {
   }
 
   // --- Helper para Headers y URL ---
-  // Dado que usamos dotenv directo, es más seguro construir la URL y headers aquí
-  // en lugar de depender de la configuración global del HttpModule.
   private getRequestConfig() {
     return {
       headers: {
@@ -47,8 +47,10 @@ export class WhatsappapiService {
     };
   }
 
+  // 💡 FIX: Aseguramos la correcta construcción de la URL (la corrección del '/' se mantiene)
   private getFullUrl(): string {
-    return `${this.baseUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+    const base = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
+    return `${base}/${this.apiVersion}/${this.phoneNumberId}/messages`;
   }
 
   // --- Enviar Mensajes ---
@@ -63,12 +65,11 @@ export class WhatsappapiService {
     };
 
     try {
-      // Pasamos la configuración de headers explícitamente
       const response = await firstValueFrom(
         this.httpService.post(url, payload, this.getRequestConfig())
       );
       
-      this.logger.log(`Mensaje enviado a ${dto.to}. ID: ${response.data.messages[0].id}`);
+      this.logger.log(`Mensaje de texto enviado a ${dto.to}. ID: ${response.data.messages[0].id}`);
       return response.data;
     } catch (error) {
       this.handleWhatsappApiError(error, 'enviar mensaje de texto');
@@ -84,12 +85,13 @@ export class WhatsappapiService {
       template: {
         name: dto.templateName,
         language: { code: dto.languageCode },
-        components: dto.components,
+        // 💡 Ajuste: Incluimos components solo si existen en el DTO
+        ...(dto.components && { components: dto.components }),
       },
     };
 
     try {
-      // Pasamos la configuración de headers explícitamente
+      // Esta llamada corresponde exactamente al curl que deseas enviar
       const response = await firstValueFrom(
         this.httpService.post(url, payload, this.getRequestConfig())
       );
@@ -130,9 +132,8 @@ export class WhatsappapiService {
 
   private handleWhatsappApiError(error: any, context: string): void {
     this.logger.error(`Error al ${context}: ${error.message}`);
-    // Loguear detalle si existe respuesta de axios
     if (error.response) {
-        this.logger.error(JSON.stringify(error.response.data));
+        this.logger.error(JSON.stringify(error.response.data)); 
     }
     throw new HttpException(error.response?.data || 'Error WhatsApp API', error.response?.status || 500);
   }
